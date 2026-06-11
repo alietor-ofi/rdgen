@@ -517,7 +517,7 @@ jobs:
           if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
             curl -X POST --data-binary "@./rustdesk/unsigned_files.zip" \
               -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
+              -m 1800 \
               "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./rustdesk/signed_files.zip
           else
             echo "Signing skipped - signing URL or API key not configured"
@@ -580,7 +580,7 @@ jobs:
           if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
             curl -X POST --data-binary "@./SignOutput/unsigned_files.zip" \
               -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
+              -m 1800 \
               "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./SignOutput/signed_files.zip
           else
             echo "Signing skipped - signing URL or API key not configured"
