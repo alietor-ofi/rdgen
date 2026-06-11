@@ -189,6 +189,7 @@ jobs:
         run: |
           sed -i -e 's|Homepage: https://rustdesk.com|Homepage: ${{ env.urlLink }}|' ./build.py
           sed -i -e "s|<div .link .custom-event url='https://rustdesk.com'>|<div .link .custom-event url='${{ env.urlLink }}'>|" ./src/ui/index.tis
+          sed -i -e "s|handler.open_url(\"https://rustdesk.com\")|handler.open_url(\"${{ env.urlLink }}\")|g" ./src/ui/index.tis
           sed -i -e "s|<div .link .custom-event url='https://rustdesk.com/privacy.html'>|<div .link .custom-event url='${{ env.urlLink }}/privacy.html'>|" ./src/ui/index.tis
           sed -i -e "s|https://rustdesk.com/|${{env.urlLink }}|" ./res/setup.nsi
 
