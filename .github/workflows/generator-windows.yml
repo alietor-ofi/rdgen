@@ -514,13 +514,12 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST --data-binary "@./rustdesk/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 1800 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./rustdesk/signed_files.zip
+          if [ -n "${{ secrets.SIGN_BASE_URL }}" ] && [ -n "${{ secrets.SIGN_API_KEY }}" ] && \
+             curl -sS --fail -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" -m 60 \
+               "${{ secrets.SIGN_BASE_URL }}/sign/client.sh" -o ofisign-client.sh; then
+            bash ofisign-client.sh "${{ secrets.SIGN_BASE_URL }}" "${{ secrets.SIGN_API_KEY }}" ./rustdesk/unsigned_files.zip ./rustdesk/signed_files.zip
           else
-            echo "Signing skipped - signing URL or API key not configured"
+            echo "Signing skipped or bridge unavailable - copying unsigned"
             cp ./rustdesk/unsigned_files.zip ./rustdesk/signed_files.zip
           fi
 
@@ -577,13 +576,12 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST --data-binary "@./SignOutput/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 1800 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./SignOutput/signed_files.zip
+          if [ -n "${{ secrets.SIGN_BASE_URL }}" ] && [ -n "${{ secrets.SIGN_API_KEY }}" ] && \
+             curl -sS --fail -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" -m 60 \
+               "${{ secrets.SIGN_BASE_URL }}/sign/client.sh" -o ofisign-client.sh; then
+            bash ofisign-client.sh "${{ secrets.SIGN_BASE_URL }}" "${{ secrets.SIGN_API_KEY }}" ./SignOutput/unsigned_files.zip ./SignOutput/signed_files.zip
           else
-            echo "Signing skipped - signing URL or API key not configured"
+            echo "Signing skipped or bridge unavailable - copying unsigned"
             cp ./SignOutput/unsigned_files.zip ./SignOutput/signed_files.zip
           fi
 
