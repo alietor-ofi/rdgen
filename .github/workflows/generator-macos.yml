@@ -537,7 +537,8 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          APP_DIR=$(ls -d flutter/build/macos/Build/Products/Release/*.app | head -n 1)
+          ASSETS_DIR="$APP_DIR/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           if [ -f "$ASSETS_DIR/icon.svg" ]; then
             mv "$ASSETS_DIR/icon.svg" "$ASSETS_DIR/icon.svg.bak"
@@ -553,7 +554,8 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          APP_DIR=$(ls -d flutter/build/macos/Build/Products/Release/*.app | head -n 1)
+          ASSETS_DIR="$APP_DIR/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           curl -k -L --tlsv1.2 --proto =https --ssl-reqd \
             -H "User-Agent: Mozilla/5.0" \
@@ -566,7 +568,8 @@ jobs:
       - name: Create custom.txt file
         shell: bash
         run: |
-          APP_RES="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Resources"
+          APP_DIR=$(ls -d flutter/build/macos/Build/Products/Release/*.app | head -n 1)
+          APP_RES="$APP_DIR/Contents/Resources"
           mkdir -p "$APP_RES"
           echo -n "${{ env.custom }}" > "$APP_RES/custom_.txt"
 
