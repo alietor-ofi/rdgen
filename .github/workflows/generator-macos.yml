@@ -221,6 +221,16 @@ jobs:
           mv ./flutter/pubspec.yaml.tmp ./flutter/pubspec.yaml
           rm ./flutter/temp_dependency.txt 
 
+      - name: set copyright and slogan
+        continue-on-error: false
+        shell: bash
+        run: |
+          if [ -n "${{ env.compname }}" ] && [ "${{ env.compname }}" != "Purslane Ltd" ]; then
+            sed -i '' -e 's|Purslane Ltd|${{ env.compname }}|g' ./flutter/lib/desktop/pages/desktop_setting_page.dart
+            find ./src/lang -name "*.rs" -exec sed -i '' '/powered_by_me/s|${{ env.appname }}|${{ env.compname }}|g' {} \;
+          fi
+          find ./src/lang -name "*.rs" ! -name "en.rs" -exec sed -i '' '/"Slogan_tip"/d' {} \;
+
       - name: Install build runtime
         run: |
           brew install llvm create-dmg
