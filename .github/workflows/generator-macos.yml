@@ -187,6 +187,10 @@ jobs:
           sed -i -e 's|https://rustdesk.com/download|${{ env.downloadLink }}|' ./flutter/lib/mobile/pages/connection_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ env.downloadLink }}|' ./src/ui/index.tis
 
+      - name: set server, key, and apiserver
+        continue-on-error: false
+        shell: bash
+        run: |
           # Update slogan
           #sed -i '' '/<key>NSHumanReadableCopyright<\/key>/{n;s/<string>.*<\/string>/<string>Copyright 2025 ${{ env.appname }}. All rights reserved.<\/string>/;}' ./flutter/macos/Runner/Info.plist
           
@@ -216,7 +220,7 @@ jobs:
           awk '/intl:/{print;system("cat ./flutter/temp_dependency.txt");next}1' ./flutter/pubspec.yaml > ./flutter/pubspec.yaml.tmp
           mv ./flutter/pubspec.yaml.tmp ./flutter/pubspec.yaml
           rm ./flutter/temp_dependency.txt 
-          
+
       - name: Install build runtime
         run: |
           brew install llvm create-dmg
@@ -533,7 +537,7 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          ASSETS_DIR="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           if [ -f "$ASSETS_DIR/icon.svg" ]; then
             mv "$ASSETS_DIR/icon.svg" "$ASSETS_DIR/icon.svg.bak"
@@ -549,7 +553,7 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          ASSETS_DIR="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           curl -k -L --tlsv1.2 --proto =https --ssl-reqd \
             -H "User-Agent: Mozilla/5.0" \
@@ -558,6 +562,13 @@ jobs:
           wget --no-check-certificate \
             -O "$ASSETS_DIR/logo.png" \
             "${{ env.logolink_url }}/get_png?filename=${{ env.logolink_file }}&uuid=${{ env.logolink_uuid }}"
+
+      - name: Create custom.txt file
+        shell: bash
+        run: |
+          APP_RES="flutter/build/macos/Build/Products/Release/RustDesk.app/Contents/Resources"
+          mkdir -p "$APP_RES"
+          echo -n "${{ env.custom }}" > "$APP_RES/custom_.txt"
 
       - name: Sign macOS app bundle
         if: env.MACOS_P12_BASE64 != ''
