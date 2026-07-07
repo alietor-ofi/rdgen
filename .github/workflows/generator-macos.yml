@@ -36,6 +36,7 @@ env:
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
+  MACOS_NOTARY_ISSUER_ID: "${{ secrets.MACOS_NOTARY_ISSUER_ID }}"
   UPLOAD_ARTIFACT: 'true'
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
 
@@ -671,6 +672,16 @@ jobs:
             "${{ env.appname }}.app"
           mv "${{ env.appname }}-${{ matrix.job.arch }}.dmg" $GITHUB_WORKSPACE/
   
+      - name: Notarize and staple DMG
+        if: env.MACOS_P12_BASE64 != '' && env.MACOS_NOTARY_ISSUER_ID != ''
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          echo "${{ secrets.MACOS_NOTARY_P8_BASE64 }}" | base64 --decode > notary-key.p8
+          rcodesign encode-app-store-connect-api-key -o notary-key.json "${{ secrets.MACOS_NOTARY_ISSUER_ID }}" "${{ secrets.MACOS_NOTARY_KEY_ID }}" notary-key.p8
+          rcodesign notary-submit --api-key-path notary-key.json --staple "${{ env.appname }}-${{ matrix.job.arch }}.dmg"
+          rm -f notary-key.p8 notary-key.json
+
       - name: Rename rustdesk
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
