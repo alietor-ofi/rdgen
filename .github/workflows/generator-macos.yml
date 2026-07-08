@@ -699,6 +699,10 @@ jobs:
           cd $GITHUB_WORKSPACE
           echo "${{ secrets.MACOS_NOTARY_P8_BASE64 }}" | base64 --decode > notary-key.p8
           rcodesign encode-app-store-connect-api-key -o notary-key.json "${{ secrets.MACOS_NOTARY_ISSUER_ID }}" "${{ secrets.MACOS_NOTARY_KEY_ID }}" notary-key.p8
+          # Firmar el DMG: rcodesign no puede grapar un DMG sin firma embebida.
+          echo "${{ secrets.MACOS_P12_BASE64 }}" | base64 --decode > dmg-cert.p12
+          rcodesign sign --p12-file dmg-cert.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" "${{ env.appname }}-${{ matrix.job.arch }}.dmg"
+          rm -f dmg-cert.p12
           rcodesign notary-submit --api-key-path notary-key.json --staple "${{ env.appname }}-${{ matrix.job.arch }}.dmg"
           rm -f notary-key.p8 notary-key.json
 
