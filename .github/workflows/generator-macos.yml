@@ -607,6 +607,26 @@ jobs:
             
             # Decode the certificate
             echo "${{ secrets.MACOS_P12_BASE64 }}" | base64 --decode > certificate.p12
+
+            # Quitar com.apple.security.get-task-allow (bloquea la notarización):
+            # re-firmar con los propios entitlements de la app menos esa clave de debug.
+            ENTITLEMENTS_ARGS=""
+            _MAIN_EXE="${{ env.appname }}.app/Contents/MacOS/${{ env.appname }}"
+            if [ ! -f "$_MAIN_EXE" ]; then
+              _MAIN_EXE="${{ env.appname }}.app/Contents/MacOS/$(ls "${{ env.appname }}.app/Contents/MacOS/" 2>/dev/null | head -n 1)"
+            fi
+            if codesign -d --entitlements :entitlements.plist "$_MAIN_EXE" 2>/dev/null && [ -s entitlements.plist ]; then
+              plutil -convert xml1 entitlements.plist 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Delete :com.apple.security.get-task-allow" entitlements.plist 2>/dev/null || true
+              if plutil -lint entitlements.plist >/dev/null 2>&1; then
+                echo "Applying entitlements (get-task-allow removed):"; cat entitlements.plist
+                ENTITLEMENTS_ARGS="--entitlements-xml-path entitlements.plist"
+              else
+                echo "WARN: entitlements.plist invalido tras editar; se firma sin entitlements"
+              fi
+            else
+              echo "Sin entitlements en el binario; se firma sin fichero de entitlements"
+            fi
             
             # Sign the app bundle and its contents
             if [ -d "${{ env.appname }}.app/Contents/MacOS" ]; then
@@ -614,7 +634,7 @@ jobs:
               MAIN_EXECUTABLE="${{ env.appname }}.app/Contents/MacOS/${{ env.appname }}"
               if [ -f "$MAIN_EXECUTABLE" ]; then
                 rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                  --code-signature-flags runtime "$MAIN_EXECUTABLE"
+                  $ENTITLEMENTS_ARGS --code-signature-flags runtime "$MAIN_EXECUTABLE"
               else
                 echo "Main executable not found at expected path: $MAIN_EXECUTABLE"
                 # Try to find the actual executable
@@ -624,7 +644,7 @@ jobs:
                 if [ -n "$ACTUAL_EXECUTABLE" ]; then
                   echo "Found executable: $ACTUAL_EXECUTABLE"
                   rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                    --code-signature-flags runtime "${{ env.appname }}.app/Contents/MacOS/$ACTUAL_EXECUTABLE"
+                    $ENTITLEMENTS_ARGS --code-signature-flags runtime "${{ env.appname }}.app/Contents/MacOS/$ACTUAL_EXECUTABLE"
                 fi
               fi
               
@@ -635,7 +655,7 @@ jobs:
               
               echo "Signing main bundle..."
               rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                --code-signature-flags runtime "${{ env.appname }}.app"
+                $ENTITLEMENTS_ARGS --code-signature-flags runtime "${{ env.appname }}.app"
             else
               echo "Error: Invalid app bundle structure"
               exit 1
