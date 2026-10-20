@@ -225,14 +225,14 @@ jobs:
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./libs/portable/Cargo.toml
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./res/msi/Package/License.rtf
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./src/main.rs
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
           sed -i -e 's|PURSLANE|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/windows/runner/Runner.rc
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./Cargo.toml
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./src/main.rs
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./flutter/windows/runner/Runner.rc
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./Cargo.toml
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./src/main.rs
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
@@ -667,13 +667,12 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST -F "file=@./rustdesk/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./rustdesk/signed_files.zip
+          if [ -n "${{ secrets.SIGN_BASE_URL }}" ] && [ -n "${{ secrets.SIGN_API_KEY }}" ] && \
+             curl -sS --fail -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" -m 60 \
+               "${{ secrets.SIGN_BASE_URL }}/sign/client.sh" -o ofisign-client.sh; then
+            bash ofisign-client.sh "${{ secrets.SIGN_BASE_URL }}" "${{ secrets.SIGN_API_KEY }}" ./rustdesk/unsigned_files.zip ./rustdesk/signed_files.zip
           else
-            echo "Signing skipped - signing URL or API key not configured"
+            echo "Signing skipped or bridge unavailable - copying unsigned"
             cp ./rustdesk/unsigned_files.zip ./rustdesk/signed_files.zip
           fi
 
@@ -728,13 +727,12 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST -F "file=@./SignOutput/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./SignOutput/signed_files.zip
+          if [ -n "${{ secrets.SIGN_BASE_URL }}" ] && [ -n "${{ secrets.SIGN_API_KEY }}" ] && \
+             curl -sS --fail -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" -m 60 \
+               "${{ secrets.SIGN_BASE_URL }}/sign/client.sh" -o ofisign-client.sh; then
+            bash ofisign-client.sh "${{ secrets.SIGN_BASE_URL }}" "${{ secrets.SIGN_API_KEY }}" ./SignOutput/unsigned_files.zip ./SignOutput/signed_files.zip
           else
-            echo "Signing skipped - signing URL or API key not configured"
+            echo "Signing skipped or bridge unavailable - copying unsigned"
             cp ./SignOutput/unsigned_files.zip ./SignOutput/signed_files.zip
           fi
 
