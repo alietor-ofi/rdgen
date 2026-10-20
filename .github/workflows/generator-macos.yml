@@ -41,6 +41,7 @@ env:
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
+  MACOS_NOTARY_ISSUER_ID: "${{ secrets.MACOS_NOTARY_ISSUER_ID }}"
   UPLOAD_ARTIFACT: 'true'
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
 
@@ -165,16 +166,16 @@ jobs:
           sed -i '' -e 's|PRODUCT_NAME = .*|PRODUCT_NAME = ${{ env.appname }}|' ./flutter/macos/Runner/Configs/AppInfo.xcconfig
           sed -i '' -e 's|PRODUCT_BUNDLE_IDENTIFIER = .*|PRODUCT_BUNDLE_IDENTIFIER = com.${{ env.appname }}.app|' ./flutter/macos/Runner/Configs/AppInfo.xcconfig
           sed -i '' -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./flutter/macos/Runner/Configs/AppInfo.xcconfig
-          sed -i '' -e 's|Purslane Ltd.|${{ env.compname }}|' ./flutter/macos/Runner/Configs/AppInfo.xcconfig
+          sed -i '' -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./flutter/macos/Runner/Configs/AppInfo.xcconfig
 
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./Cargo.toml
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./libs/portable/Cargo.toml
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
           sed -i -e 's|Purslane Tech Pte. Ltd.|${{ env.compname }}|' ./src/main.rs
-          sed -i -e 's|Purslane Ltd.|${{ env.compname }}|' ./Cargo.toml
-          sed -i -e 's|Purslane Ltd.|${{ env.compname }}|' ./libs/portable/Cargo.toml
-          sed -i -e 's|Purslane Ltd.|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./src/main.rs
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./Cargo.toml
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
+          sed -i -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|' ./src/main.rs
           
           # Update Xcode project settings
           sed -i '' -e 's/PRODUCT_NAME = "RustDesk"/PRODUCT_NAME = "${{ env.appname }}"/' ./flutter/macos/Runner.xcodeproj/project.pbxproj
@@ -209,7 +210,11 @@ jobs:
           sed -i -e 's|https://rustdesk.com/download|${{ env.downloadLink }}|' ./src/ui/index.tis
           sed -i -e 's|&download_url|"${{ env.downloadLink }}"|' ./src/updater.rs
           sed -i -e 's|$downloadUrl/$downloadFile|${{ env.downloadLink }}|' ./flutter/lib/desktop/widgets/update_progress.dart
-          
+
+      - name: set server, key, and apiserver
+        continue-on-error: false
+        shell: bash
+        run: |
           # Update slogan - About in en.rs 
           sed -i '' -e 's/("Slogan_tip", "Made with heart in this chaotic world!")/("Slogan_tip", "Powered by ${{ env.appname }}")/' ./src/lang/en.rs
           sed -i '' -e 's/("About RustDesk", "")/("About RustDesk", "About ${{ env.appname }}")/' ./src/lang/en.rs
@@ -227,6 +232,16 @@ jobs:
           awk '/intl:/{print;system("cat ./flutter/temp_dependency.txt");next}1' ./flutter/pubspec.yaml > ./flutter/pubspec.yaml.tmp
           mv ./flutter/pubspec.yaml.tmp ./flutter/pubspec.yaml
           rm ./flutter/temp_dependency.txt 
+
+      - name: set copyright and slogan
+        continue-on-error: false
+        shell: bash
+        run: |
+          if [ -n "${{ env.compname }}" ] && [ "${{ env.compname }}" != "Purslane Ltd" ]; then
+            sed -i '' -e 's|Purslane\( Tech Pte\.\)\{0,1\} Ltd|${{ env.compname }}|g' ./flutter/lib/desktop/pages/desktop_setting_page.dart
+            find ./src/lang -name "*.rs" -exec sed -i '' '/powered_by_me/s|${{ env.appname }}|${{ env.compname }}|g' {} \;
+          fi
+          find ./src/lang -name "*.rs" ! -name "en.rs" -exec sed -i '' '/"Slogan_tip"/d' {} \;
 
       - name: set server, serverPort, key, and apiserver
         continue-on-error: true
@@ -589,8 +604,8 @@ jobs:
         run: |
           APP=$(find ./flutter/build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -n 1)
           echo "App bundle: $APP"
-          echo -n '${{ env.custom }}' > "$APP/Contents/MacOS/custom_.txt"
-          ls -l "$APP/Contents/MacOS/custom_.txt"
+          echo -n '${{ env.custom }}' > "$APP/Contents/Resources/custom_.txt"
+          ls -l "$APP/Contents/Resources/custom_.txt"
       
       - name: Install rcodesign tool
         if: env.MACOS_P12_BASE64 != null
@@ -627,7 +642,8 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          APP_DIR=$(ls -d flutter/build/macos/Build/Products/Release/*.app | head -n 1)
+          ASSETS_DIR="$APP_DIR/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           if [ -f "$ASSETS_DIR/icon.svg" ]; then
             mv "$ASSETS_DIR/icon.svg" "$ASSETS_DIR/icon.svg.bak"
@@ -643,7 +659,8 @@ jobs:
         continue-on-error: false
         shell: bash
         run: |
-          ASSETS_DIR="build/macos/Build/Products/Release/RustDesk.app/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
+          APP_DIR=$(ls -d flutter/build/macos/Build/Products/Release/*.app | head -n 1)
+          ASSETS_DIR="$APP_DIR/Contents/Frameworks/App.framework/Versions/Current/Resources/flutter_assets/assets"
           mkdir -p "$ASSETS_DIR"
           curl -k -L --tlsv1.2 --proto =https --ssl-reqd \
             -H "User-Agent: Mozilla/5.0" \
@@ -674,6 +691,26 @@ jobs:
             
             # Decode the certificate
             echo "${{ secrets.MACOS_P12_BASE64 }}" | base64 --decode > certificate.p12
+
+            # Quitar com.apple.security.get-task-allow (bloquea la notarización):
+            # re-firmar con los propios entitlements de la app menos esa clave de debug.
+            ENTITLEMENTS_ARGS=""
+            _MAIN_EXE="${{ env.appname }}.app/Contents/MacOS/${{ env.appname }}"
+            if [ ! -f "$_MAIN_EXE" ]; then
+              _MAIN_EXE="${{ env.appname }}.app/Contents/MacOS/$(ls "${{ env.appname }}.app/Contents/MacOS/" 2>/dev/null | head -n 1)"
+            fi
+            if codesign -d --entitlements :entitlements.plist "$_MAIN_EXE" 2>/dev/null && [ -s entitlements.plist ]; then
+              plutil -convert xml1 entitlements.plist 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Delete :com.apple.security.get-task-allow" entitlements.plist 2>/dev/null || true
+              if plutil -lint entitlements.plist >/dev/null 2>&1; then
+                echo "Applying entitlements (get-task-allow removed):"; cat entitlements.plist
+                ENTITLEMENTS_ARGS="--entitlements-xml-path entitlements.plist"
+              else
+                echo "WARN: entitlements.plist invalido tras editar; se firma sin entitlements"
+              fi
+            else
+              echo "Sin entitlements en el binario; se firma sin fichero de entitlements"
+            fi
             
             # Sign the app bundle and its contents
             if [ -d "${{ env.appname }}.app/Contents/MacOS" ]; then
@@ -681,7 +718,7 @@ jobs:
               MAIN_EXECUTABLE="${{ env.appname }}.app/Contents/MacOS/${{ env.appname }}"
               if [ -f "$MAIN_EXECUTABLE" ]; then
                 rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                  --code-signature-flags runtime "$MAIN_EXECUTABLE"
+                  $ENTITLEMENTS_ARGS --code-signature-flags runtime "$MAIN_EXECUTABLE"
               else
                 echo "Main executable not found at expected path: $MAIN_EXECUTABLE"
                 # Try to find the actual executable
@@ -691,7 +728,7 @@ jobs:
                 if [ -n "$ACTUAL_EXECUTABLE" ]; then
                   echo "Found executable: $ACTUAL_EXECUTABLE"
                   rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                    --code-signature-flags runtime "${{ env.appname }}.app/Contents/MacOS/$ACTUAL_EXECUTABLE"
+                    $ENTITLEMENTS_ARGS --code-signature-flags runtime "${{ env.appname }}.app/Contents/MacOS/$ACTUAL_EXECUTABLE"
                 fi
               fi
               
@@ -702,7 +739,7 @@ jobs:
               
               echo "Signing main bundle..."
               rcodesign sign --p12-file certificate.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" \
-                --code-signature-flags runtime "${{ env.appname }}.app"
+                $ENTITLEMENTS_ARGS --code-signature-flags runtime "${{ env.appname }}.app"
             else
               echo "Error: Invalid app bundle structure"
               exit 1
@@ -765,6 +802,20 @@ jobs:
             "${{ env.appname }}.app"
           mv "${{ env.appname }}-${{ matrix.job.arch }}.dmg" $GITHUB_WORKSPACE/
   
+      - name: Notarize and staple DMG
+        if: env.MACOS_P12_BASE64 != '' && env.MACOS_NOTARY_ISSUER_ID != ''
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          echo "${{ secrets.MACOS_NOTARY_P8_BASE64 }}" | base64 --decode > notary-key.p8
+          rcodesign encode-app-store-connect-api-key -o notary-key.json "${{ secrets.MACOS_NOTARY_ISSUER_ID }}" "${{ secrets.MACOS_NOTARY_KEY_ID }}" notary-key.p8
+          # Firmar el DMG: rcodesign no puede grapar un DMG sin firma embebida.
+          echo "${{ secrets.MACOS_P12_BASE64 }}" | base64 --decode > dmg-cert.p12
+          rcodesign sign --p12-file dmg-cert.p12 --p12-password "${{ secrets.MACOS_P12_PASSWORD }}" "${{ env.appname }}-${{ matrix.job.arch }}.dmg"
+          rm -f dmg-cert.p12
+          rcodesign notary-submit --api-key-path notary-key.json --staple "${{ env.appname }}-${{ matrix.job.arch }}.dmg"
+          rm -f notary-key.p8 notary-key.json
+
       - name: Rename rustdesk
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
